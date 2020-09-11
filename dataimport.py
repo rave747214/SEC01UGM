@@ -1,5 +1,7 @@
 # Colab library to upload files to notebook
 from google.colab import files
+from google.colab import drive
+drive.mount('/content/drive', force_remount=True)
 
 # Install Kaggle library
 !pip install -q kaggle
@@ -16,7 +18,7 @@ data = files.upload()
 
 # Extract zipfile
 import zipfile
-zip_ref = zipfile.ZipFile('covidct.zip', 'r')
+zip_ref = zipfile.ZipFile('covid19-radiography-database.zip', 'r')
 zip_ref.extractall('files')
 zip_ref.close()
 
@@ -98,7 +100,11 @@ def img_train_test_split(img_source_dir, train_size):
         print('Copied ' + str(train_counter) + ' images to data/train/' + subdir)
         print('Copied ' + str(validation_counter) + ' images to data/validation/' + subdir)
 
+
+# Remove unused folder
+!rm -rf '/content/files/COVID-19 Radiography Database/Viral Pneumonia' 
+
 # Run the split function
-img_train_test_split('/content/files',0.7)
+img_train_test_split('/content/files/COVID-19 Radiography Database',0.7)
 
 !pip install -q pyyaml h5py
