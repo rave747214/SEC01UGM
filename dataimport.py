@@ -14,7 +14,7 @@ data = files.upload()
 !chmod 600 ~/.kaggle/kaggle.json
 
 # Download the dataset from kaggle
-!kaggle datasets download -d luisblanche/covidct
+!kaggle datasets download -d tawsifurrahman/covid19-radiography-database
 
 # Extract zipfile
 import zipfile
