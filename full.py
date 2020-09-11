@@ -1,5 +1,7 @@
 # Colab library to upload files to notebook
 from google.colab import files
+from google.colab import drive
+drive.mount('/content/drive', force_remount=True)
 
 # Install Kaggle library
 !pip install -q kaggle
@@ -12,11 +14,11 @@ data = files.upload()
 !chmod 600 ~/.kaggle/kaggle.json
 
 # Download the dataset from kaggle
-!kaggle datasets download -d luisblanche/covidct
+!kaggle datasets download -d tawsifurrahman/covid19-radiography-database
 
 # Extract zipfile
 import zipfile
-zip_ref = zipfile.ZipFile('covidct.zip', 'r')
+zip_ref = zipfile.ZipFile('covid19-radiography-database.zip', 'r')
 zip_ref.extractall('files')
 zip_ref.close()
 
@@ -98,8 +100,12 @@ def img_train_test_split(img_source_dir, train_size):
         print('Copied ' + str(train_counter) + ' images to data/train/' + subdir)
         print('Copied ' + str(validation_counter) + ' images to data/validation/' + subdir)
 
+        
+# Remove unused folder
+!rm -rf '/content/files/COVID-19 Radiography Database/Viral Pneumonia' 
+
 # Run the split function
-img_train_test_split('/content/files',0.7)
+img_train_test_split('/content/files/COVID-19 Radiography Database',0.7)
 
 !pip install -q pyyaml h5py
 
@@ -109,6 +115,9 @@ import tensorflow as tf
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.metrics import Precision, Recall
+
+prec = Precision(name='prec')
+rec = Recall(name='rec')
 
 # Create the model
 model = tf.keras.models.Sequential([
@@ -124,7 +133,7 @@ model = tf.keras.models.Sequential([
     tf.keras.layers.Dense(1, activation='sigmoid')
 ])
 
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',Precision(),Recall()])
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',prec,rec])
 
 model.summary()
 
@@ -149,63 +158,29 @@ history = model.fit(train_generator,
                               verbose=1,
                               validation_data=validation_generator)
 
-%matplotlib inline
-
-import matplotlib.image  as mpimg
 import matplotlib.pyplot as plt
+plt.style.use('seaborn-white')
+def plot_ax(axes, metrics, title, epochs):
+    val_met = 'val_' + metrics
+    axes.plot(history.history[metrics], c='blue', linewidth=1.5)
+    axes.plot(history.history[val_met], c='orange', linewidth=1.5)
+    axes.set_title(title)
+    axes.set_xticks(range(0, epochs, epochs // 10))
+    axes.legend([metrics, val_met], loc='best')
+    axes.set_ylabel(metrics)
+    axes.grid()
+    
+fig, ax = plt.subplots(2, 2, sharex=True, figsize=(20, 10))
+fig.set_size_inches(14., 7.)
+plot_ax(ax[0][0], 'loss', 'Loss', 200)
+plot_ax(ax[0][1], 'accuracy', 'Akurasi', 200)
+plot_ax(ax[1][0], 'prec', 'Presisi', 200)
+plot_ax(ax[1][1], 'rec', 'Recall', 200)
+fig = plt.gcf()
+plt.suptitle('Grafik Setiap Metrics (CNN)\n(sumbu x adalah epoch)')
+plt.show()
 
-#-----------------------------------------------------------
-# Retrieve a list of list results on training and test data
-# sets for each training epoch
-#-----------------------------------------------------------
-acc=history.history['accuracy']
-val_acc=history.history['val_accuracy']
-loss=history.history['loss']
-val_loss=history.history['val_loss']
-pre=history.history['precision']
-val_pre=history.history['val_precision']
-rec=history.history['recall']
-val_rec=history.history['val_recall']
-
-epochs=range(len(acc)) # Get number of epochs
-
-#------------------------------------------------
-# Plot training and validation accuracy per epoch
-#------------------------------------------------
-plt.plot(epochs, acc, 'r', label = 'Training accuracy')
-plt.plot(epochs, val_acc, 'b', label ='Validation accuracy')
-plt.title('Training and validation accuracy')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation loss per epoch
-#------------------------------------------------
-plt.plot(epochs, loss, 'r', label = 'Training loss')
-plt.plot(epochs, val_loss, 'b', label = 'Validation loss')
-plt.title('Training and validation loss')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation precision per epoch
-#------------------------------------------------
-plt.plot(epochs, pre, 'r', label = 'Training precision')
-plt.plot(epochs, val_pre, 'b', label ='Validation precision')
-plt.title('Training and validation precision')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation recall per epoch
-#------------------------------------------------
-plt.plot(epochs, rec, 'r', label = 'Training recall')
-plt.plot(epochs, val_rec, 'b', label = 'Validation recall')
-plt.title('Training and validation recall')
-plt.legend()
-plt.figure()
-
-model.save('baseline.h5')
+model.save('/content/drive/My Drive/Kompetisi/SATRIA DATA 2020/SEC/baseline.h5')
 
 ## Transfer Learning
 from tensorflow.keras.applications import MobileNetV2, InceptionV3, VGG16, VGG19, ResNet50, InceptionResNetV2
@@ -231,7 +206,7 @@ model.summary
 
 model.compile(optimizer = 'adam',
               loss = 'binary_crossentropy',
-              metrics = ['accuracy',Precision(),Recall()])
+              metrics = ['accuracy',prec,rec])
 
 # Fit the model
 history = model.fit(train_generator,
@@ -239,58 +214,17 @@ history = model.fit(train_generator,
                               verbose=1,
                               validation_data=validation_generator)
 
-#-----------------------------------------------------------
-# Retrieve a list of list results on training and test data
-# sets for each training epoch
-#-----------------------------------------------------------
-acc=history.history['accuracy']
-val_acc=history.history['val_accuracy']
-loss=history.history['loss']
-val_loss=history.history['val_loss']
-pre=history.history['precision_1']
-val_pre=history.history['val_precision_1']
-rec=history.history['recall_1']
-val_rec=history.history['val_recall_1']
+fig, ax = plt.subplots(2, 2, sharex=True, figsize=(20, 10))
+fig.set_size_inches(14., 7.)
+plot_ax(ax[0][0], 'loss', 'Loss', 200)
+plot_ax(ax[0][1], 'accuracy', 'Akurasi', 200)
+plot_ax(ax[1][0], 'prec', 'Presisi', 200)
+plot_ax(ax[1][1], 'rec', 'Recall', 200)
+fig = plt.gcf()
+plt.suptitle('Grafik Setiap Metrics (MobileNetV2)\n(sumbu x adalah epoch)')
+plt.show()
 
-epochs=range(len(acc)) # Get number of epochs
-
-#------------------------------------------------
-# Plot training and validation accuracy per epoch
-#------------------------------------------------
-plt.plot(epochs, acc, 'r', label = 'Training accuracy')
-plt.plot(epochs, val_acc, 'b', label ='Validation accuracy')
-plt.title('Training and validation accuracy')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation loss per epoch
-#------------------------------------------------
-plt.plot(epochs, loss, 'r', label = 'Training loss')
-plt.plot(epochs, val_loss, 'b', label = 'Validation loss')
-plt.title('Training and validation loss')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation precision per epoch
-#------------------------------------------------
-plt.plot(epochs, pre, 'r', label = 'Training precision')
-plt.plot(epochs, val_pre, 'b', label ='Validation precision')
-plt.title('Training and validation precision')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation recall per epoch
-#------------------------------------------------
-plt.plot(epochs, rec, 'r', label = 'Training recall')
-plt.plot(epochs, val_rec, 'b', label = 'Validation recall')
-plt.title('Training and validation recall')
-plt.legend()
-plt.figure()
-
-model.save('mobiletrans.h5')
+model.save('/content/drive/My Drive/Kompetisi/SATRIA DATA 2020/SEC/mobiletrans.h5')
 
 # InceptionV3
 incept_model=InceptionV3(input_shape=(300,300,3),include_top=False)
@@ -311,7 +245,7 @@ model.summary
 
 model.compile(optimizer = 'adam',
               loss = 'binary_crossentropy',
-              metrics = ['accuracy',Precision(),Recall()])
+              metrics = ['accuracy',prec,rec])
 
 # Fit the model
 history = model.fit(train_generator,
@@ -319,58 +253,17 @@ history = model.fit(train_generator,
                               verbose=1,
                               validation_data=validation_generator)
 
-#-----------------------------------------------------------
-# Retrieve a list of list results on training and test data
-# sets for each training epoch
-#-----------------------------------------------------------
-acc=history.history['accuracy']
-val_acc=history.history['val_accuracy']
-loss=history.history['loss']
-val_loss=history.history['val_loss']
-pre=history.history['precision_2']
-val_pre=history.history['val_precision_2']
-rec=history.history['recall_2']
-val_rec=history.history['val_recall_2']
+fig, ax = plt.subplots(2, 2, sharex=True, figsize=(20, 10))
+fig.set_size_inches(14., 7.)
+plot_ax(ax[0][0], 'loss', 'Loss', 200)
+plot_ax(ax[0][1], 'accuracy', 'Akurasi', 200)
+plot_ax(ax[1][0], 'prec', 'Presisi', 200)
+plot_ax(ax[1][1], 'rec', 'Recall', 200)
+fig = plt.gcf()
+plt.suptitle('Grafik Setiap Metrics (InceptionV3)\n(sumbu x adalah epoch)')
+plt.show()
 
-epochs=range(len(acc)) # Get number of epochs
-
-#------------------------------------------------
-# Plot training and validation accuracy per epoch
-#------------------------------------------------
-plt.plot(epochs, acc, 'r', label = 'Training accuracy')
-plt.plot(epochs, val_acc, 'b', label ='Validation accuracy')
-plt.title('Training and validation accuracy')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation loss per epoch
-#------------------------------------------------
-plt.plot(epochs, loss, 'r', label = 'Training loss')
-plt.plot(epochs, val_loss, 'b', label = 'Validation loss')
-plt.title('Training and validation loss')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation precision per epoch
-#------------------------------------------------
-plt.plot(epochs, pre, 'r', label = 'Training precision')
-plt.plot(epochs, val_pre, 'b', label ='Validation precision')
-plt.title('Training and validation precision')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation recall per epoch
-#------------------------------------------------
-plt.plot(epochs, rec, 'r', label = 'Training recall')
-plt.plot(epochs, val_rec, 'b', label = 'Validation recall')
-plt.title('Training and validation recall')
-plt.legend()
-plt.figure()
-
-model.save('Inceptrans.h5')
+model.save('/content/drive/My Drive/Kompetisi/SATRIA DATA 2020/SEC/Inceptrans.h5')
 
 # VGG19
 vgg19_model=VGG19(input_shape=(300,300,3),include_top=False)
@@ -391,7 +284,7 @@ model.summary
 
 model.compile(optimizer = 'adam',
               loss = 'binary_crossentropy',
-              metrics = ['accuracy',Precision(),Recall()])
+              metrics = ['accuracy',prec,rec])
 
 # Fit the model
 history = model.fit(train_generator,
@@ -399,55 +292,14 @@ history = model.fit(train_generator,
                               verbose=1,
                               validation_data=validation_generator)
 
-#-----------------------------------------------------------
-# Retrieve a list of list results on training and test data
-# sets for each training epoch
-#-----------------------------------------------------------
-acc=history.history['accuracy']
-val_acc=history.history['val_accuracy']
-loss=history.history['loss']
-val_loss=history.history['val_loss']
-pre=history.history['precision_4']
-val_pre=history.history['val_precision_4']
-rec=history.history['recall_4']
-val_rec=history.history['val_recall_4']
+fig, ax = plt.subplots(2, 2, sharex=True, figsize=(20, 10))
+fig.set_size_inches(14., 7.)
+plot_ax(ax[0][0], 'loss', 'Loss', 200)
+plot_ax(ax[0][1], 'accuracy', 'Akurasi', 200)
+plot_ax(ax[1][0], 'prec', 'Presisi', 200)
+plot_ax(ax[1][1], 'rec', 'Recall', 200)
+fig = plt.gcf()
+plt.suptitle('Grafik Setiap Metrics (VGG19)\n(sumbu x adalah epoch)')
+plt.show()
 
-epochs=range(len(acc)) # Get number of epochs
-
-#------------------------------------------------
-# Plot training and validation accuracy per epoch
-#------------------------------------------------
-plt.plot(epochs, acc, 'r', label = 'Training accuracy')
-plt.plot(epochs, val_acc, 'b', label ='Validation accuracy')
-plt.title('Training and validation accuracy')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation loss per epoch
-#------------------------------------------------
-plt.plot(epochs, loss, 'r', label = 'Training loss')
-plt.plot(epochs, val_loss, 'b', label = 'Validation loss')
-plt.title('Training and validation loss')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation precision per epoch
-#------------------------------------------------
-plt.plot(epochs, pre, 'r', label = 'Training precision')
-plt.plot(epochs, val_pre, 'b', label ='Validation precision')
-plt.title('Training and validation precision')
-plt.legend()
-plt.figure()
-
-#------------------------------------------------
-# Plot training and validation recall per epoch
-#------------------------------------------------
-plt.plot(epochs, rec, 'r', label = 'Training recall')
-plt.plot(epochs, val_rec, 'b', label = 'Validation recall')
-plt.title('Training and validation recall')
-plt.legend()
-plt.figure()
-
-model.save('VGG19trans.h5')
+model.save('/content/drive/My Drive/Kompetisi/SATRIA DATA 2020/SEC/VGG19trans.h5')
